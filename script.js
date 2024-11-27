@@ -1,5 +1,3 @@
-/* https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/london?key=8LFCZ2WZPLTSWFHLPXM5PHWG6 */
-
 async function getData(location) {
   let cityWeather = "";
   Startlaoding();
@@ -19,8 +17,10 @@ async function getData(location) {
     const humidity = await data.days[0].humidity;
     const windSpeed = await data.days[0].windspeed;
     const windDirection = await data.days[0].winddir;
+    const precipprob = await data.days[0].precipprob;
     const endTime = Date.now();
     const timeTaken = endTime - startTime;
+    const hourlyWeather = await data.days[0].hours;
     cityWeather = weather(
       location,
       date,
@@ -30,10 +30,13 @@ async function getData(location) {
       maxTemp,
       humidity,
       windSpeed,
-      windDirection
+      windDirection,
+      precipprob
     );
     setBackground(cityWeather.getCondition().toLowerCase());
     displayData(cityWeather);
+    getHourlyweather(hourlyWeather);
+
     finishLoading();
 
     console.log(`total time ${timeTaken}ms`);
@@ -53,7 +56,8 @@ function weather(
   maxTemp,
   humidity,
   windSpeed,
-  windDirection
+  windDirection,
+  precipprob
 ) {
   const getLocation = () => location;
 
@@ -72,6 +76,8 @@ function weather(
   const getWindDirection = () => windDirection;
   const getDate = () => date;
 
+  const getPrecipprob = () => precipprob;
+
   const info = () =>
     `address: ${location}, date: ${date}, temp: ${temp}c°, condition: ${condition}, Min: ${minTemp}c°, Max: ${maxTemp}c°,` +
     `humidity: ${humidity}% wind speed: ${windSpeed}kph, wind direction: ${windDirection}°  `;
@@ -86,6 +92,7 @@ function weather(
     getHumidity,
     getWindSpeed,
     getWindDirection,
+    getPrecipprob,
     info,
   };
 }
@@ -117,7 +124,8 @@ function finishLoading() {
 function displayData(cityWeather) {
   const body = document.querySelector("body");
   const div = document.createElement("div");
-
+  const div1 = document.createElement("div");
+  div1.className = "dayWeather";
   div.className = "container";
 
   const p1 = document.createElement("p");
@@ -129,6 +137,7 @@ function displayData(cityWeather) {
   const p7 = document.createElement("p");
   const p8 = document.createElement("p");
   const p9 = document.createElement("p");
+  const p10 = document.createElement("p");
   const img = document.createElement("img");
 
   p1.textContent = "location: " + cityWeather.getLocation();
@@ -140,9 +149,11 @@ function displayData(cityWeather) {
   p7.textContent = "wind speed: " + cityWeather.getWindSpeed() + "kph";
   p8.textContent = "wind direction: " + cityWeather.getWindDirection() + "°";
   p9.textContent = "date: " + cityWeather.getDate();
+  p9.textContent = "Precipprob: " + cityWeather.getPrecipprob() + "%";
   img.src = "imgs/" + cityWeather.getCondition() + ".png";
 
-  div.append(img, p1, p9, p2, p3, p4, p5, p6, p7, p8);
+  div1.append(img, p1, p9, p2, p3, p4, p5, p6, p7, p8, p10);
+  div.appendChild(div1);
   body.appendChild(div);
 }
 function card(cityWeather) {
@@ -152,13 +163,21 @@ function card(cityWeather) {
   const img = document.createElement("img");
   const p2 = document.createElement("p");
   const p3 = document.createElement("p");
+  const div1 = document.createElement("div");
+  const drop = document.createElement("img");
   const p4 = document.createElement("p");
+
   img.src = "imgs/" + cityWeather.getCondition() + ".png";
   p2.textContent = cityWeather.getDate();
   p3.textContent =
     cityWeather.getMaxTemp() + "° " + "/" + cityWeather.getMinTemp() + "° ";
+  p4.textContent = cityWeather.getPrecipprob() + "%";
+  drop.src = "imgs/drop.png";
+  drop.className = "small";
+  div1.append(drop, p4);
+  div1.className = "pros";
 
-  card.append(img, p2, p3, p4);
+  card.append(img, p2, p3, div1);
 
   div.appendChild(card);
 }
@@ -188,7 +207,8 @@ async function getAllData(location) {
         day.tempmax,
         day.humidity,
         day.windspeed,
-        day.winddir
+        day.winddir,
+        day.precipprob
       );
       card(cityWeather);
     });
@@ -229,6 +249,15 @@ function cleanBody() {
     div2.remove();
   }
 }
+function getHourlyweather(cityWeather) {
+  const div = document.querySelector(".container");
+  const div1 = document.createElement("div");
+  div1.className = "hourlyWeather";
+  div.appendChild(div1);
+  cityWeather.forEach((hour) => {
+    displayHourlyData(hour);
+  });
+}
 function createCardesDiv() {
   const body = document.querySelector("body");
   const div = document.createElement("div");
@@ -236,3 +265,35 @@ function createCardesDiv() {
   body.appendChild(div);
 }
 eventBtn();
+function getWeatherForCurrentLOcation() {
+  Startlaoding();
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    await getData(position.coords.latitude + "," + position.coords.longitude);
+    getAllData(position.coords.latitude + "," + position.coords.longitude);
+    finishLoading();
+  });
+}
+function displayHourlyData(data) {
+  const div = document.querySelector(".hourlyWeather");
+  const div1 = document.createElement("div");
+  const div2 = document.createElement("div");
+
+  div1.className = "hours";
+
+  const p1 = document.createElement("p");
+  const p2 = document.createElement("p");
+  const p3 = document.createElement("p");
+  const img = document.createElement("img");
+
+  p3.textContent = data.temp + "c°";
+
+  p1.textContent = data.datetime.slice(0, 5);
+  p2.textContent = data.precipprob + "%";
+  img.src = "imgs/drop.png";
+  img.className = "small";
+  div2.append(img, p2);
+
+  div1.append(p1, p3, div2);
+  div.appendChild(div1);
+}
+getWeatherForCurrentLOcation();
